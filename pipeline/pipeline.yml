@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: BuildConfig
 metadata:
-  name: web-pipeline
+  name: webapp-pipeline
 spec:
   strategy:
     jenkinsPipelineStrategy:
@@ -14,7 +14,7 @@ spec:
                 script {
                   openshift.withCluster() {
                     openshift.withProject() {
-                      openshift.startBuild("web").logs('-f')
+                      openshift.startBuild("webapp").logs('-f')
                     }
                   }
                 }
@@ -25,7 +25,7 @@ spec:
                 script {
                   openshift.withCluster() {
                     openshift.withProject() {
-                      dc = openshift.selector("dc", "web")
+                      dc = openshift.selector("dc", "webapp")
                       dc.rollout().latest()
                       timeout(10) {
                           dc.rollout().status("-w")
@@ -37,7 +37,7 @@ spec:
             }
             stage('Test') {
               steps {
-                sh "curl -s http://web:8080/ | grep 'Hello'"
+                sh "curl -s http://webapp:8080/ | grep 'Hello'"
               }
             }
           }
