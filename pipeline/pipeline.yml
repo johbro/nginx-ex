@@ -1,0 +1,45 @@
+apiVersion: v1
+kind: BuildConfig
+metadata:
+  name: web-pipeline
+spec:
+  strategy:
+    jenkinsPipelineStrategy:
+      jenkinsfile: |-
+        pipeline {
+          agent any
+          stages {
+            stage('Build') {
+              steps {
+                script {
+                  openshift.withCluster() {
+                    openshift.withProject() {
+                      openshift.startBuild("web").logs('-f')
+                    }
+                  }
+                }
+              }
+            }
+            stage('Deploy') {
+              steps {
+                script {
+                  openshift.withCluster() {
+                    openshift.withProject() {
+                      dc = openshift.selector("dc", "web")
+                      dc.rollout().latest()
+                      timeout(10) {
+                          dc.rollout().status("-w")
+                      }
+                    }
+                  }
+                }
+              }
+            }
+            stage('Test') {
+              steps {
+                sh "curl -s http://web:8080/ | grep 'Hello'"
+              }
+            }
+          }
+        }
+    type: JenkinsPipeline
