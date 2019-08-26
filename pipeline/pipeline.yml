@@ -1,15 +1,28 @@
-apiVersion: v1
+apiVersion: build.openshift.io/v1
 kind: BuildConfig
 metadata:
+  creationTimestamp: '2019-08-26T18:16:43Z'
   name: webapp-pipeline
+  namespace: webapp-dev
+  resourceVersion: '33231'
+  selfLink: >-
+    /apis/build.openshift.io/v1/namespaces/webapp-dev/buildconfigs/webapp-pipeline
+  uid: a85d2104-c82d-11e9-84dc-064f2d7c2c16
 spec:
+  nodeSelector: {}
+  output: {}
+  postCommit: {}
+  resources: {}
+  runPolicy: Serial
+  source:
+    type: None
   strategy:
     jenkinsPipelineStrategy:
       jenkinsfile: |-
         pipeline {
           agent any
           stages {
-            stage('Build') {
+            stage('Start Image Stream Build') {
               steps {
                 script {
                   openshift.withCluster() {
@@ -20,26 +33,24 @@ spec:
                 }
               }
             }
-            stage('Deploy') {
-              steps {
-                script {
-                  openshift.withCluster() {
-                    openshift.withProject() {
-                      dc = openshift.selector("dc", "webapp")
-                      dc.rollout().latest()
-                      timeout(10) {
-                          dc.rollout().status("-w")
-                      }
-                    }
-                  }
-                }
-              }
-            }
-            stage('Test') {
+            stage('Test Deployment') {
               steps {
                 sh "curl -s http://webapp:8080/ | grep 'Hello'"
               }
             }
+            stage('Promote to Prod') {
+              steps {
+                timeout(time:15, unit:'MINUTES') {
+                    input message: "Approve Promotion to Prod?", ok: "Promote"
+                }
+                script {
+                  openshift.withCluster() {
+                    openshift.tag("webapp-dev/webapp:latest", "webapp-prod/webapp:prod")
+                    openshiftDeploy(namespace: 'webapp-prod', deploymentConfig: 'webapp')
+              }
+            }
+          }
+        }
           }
         }
     type: JenkinsPipeline
