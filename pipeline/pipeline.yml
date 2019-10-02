@@ -46,7 +46,6 @@ spec:
                 script {
                   openshift.withCluster() {
                     openshift.tag("webapp-dev/webapp:latest", "webapp-prod/webapp:prod")
-                    openshiftDeploy(namespace: 'webapp-prod', deploymentConfig: 'webapp')
               }
             }
           }
